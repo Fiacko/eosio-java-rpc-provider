@@ -26,6 +26,7 @@ import one.block.eosiojava.models.rpcProvider.response.RPCResponseError;
 import one.block.eosiojava.models.rpcProvider.response.SendTransactionResponse;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.Field;
 import java.util.Locale;
 
 import okhttp3.OkHttpClient;
@@ -178,8 +179,47 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
     public @NotNull GetBlockInfoResponse getBlockInfo(GetBlockInfoRequest getBlockInfoRequest)
             throws GetBlockInfoRpcError {
         try {
-            Call<GetBlockInfoResponse> syncCall = this.rpcProviderApi.getBlockInfo(getBlockInfoRequest);
-            return processCall(syncCall);
+            Call<GetBlockResponse> syncCall = this.rpcProviderApi.getBlock(new GetBlockRequest(getBlockInfoRequest.getBlockNum().toString()));
+            GetBlockResponse response = processCall(syncCall);
+            GetBlockInfoResponse infoResponse = new GetBlockInfoResponse();
+
+            Field timestamp = infoResponse.getClass().getDeclaredField("timestamp");
+            Field producer = infoResponse.getClass().getDeclaredField("producer");
+            Field confirmed = infoResponse.getClass().getDeclaredField("confirmed");
+            Field previous = infoResponse.getClass().getDeclaredField("previous");
+            Field transactionMroot = infoResponse.getClass().getDeclaredField("transactionMroot");
+            Field actionMroot = infoResponse.getClass().getDeclaredField("actionMroot");
+            Field scheduleVersion = infoResponse.getClass().getDeclaredField("scheduleVersion");
+            Field producerSignature = infoResponse.getClass().getDeclaredField("producerSignature");
+            Field id = infoResponse.getClass().getDeclaredField("id");
+            Field blockNum = infoResponse.getClass().getDeclaredField("blockNum");
+            Field refBlockPrefix = infoResponse.getClass().getDeclaredField("refBlockPrefix");
+
+            timestamp.setAccessible(true);
+            producer.setAccessible(true);
+            confirmed.setAccessible(true);
+            previous.setAccessible(true);
+            transactionMroot.setAccessible(true);
+            actionMroot.setAccessible(true);
+            scheduleVersion.setAccessible(true);
+            producerSignature.setAccessible(true);
+            id.setAccessible(true);
+            blockNum.setAccessible(true);
+            refBlockPrefix.setAccessible(true);
+
+            timestamp.set(infoResponse, response.getTimestamp());
+            producer.set(infoResponse, response.getProducer());
+            confirmed.set(infoResponse, response.getConfirmed());
+            previous.set(infoResponse, response.getPrevious());
+            transactionMroot.set(infoResponse, response.getTransactionMroot());
+            actionMroot.set(infoResponse, response.getActionMroot());
+            scheduleVersion.set(infoResponse, response.getScheduleVersion());
+            producerSignature.set(infoResponse, response.getProducerSignature());
+            id.set(infoResponse, response.getId());
+            blockNum.set(infoResponse, response.getBlockNum());
+            refBlockPrefix.set(infoResponse, response.getRefBlockPrefix());
+
+            return infoResponse;
         } catch (Exception ex) {
             throw new GetBlockInfoRpcError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GETTING_BLOCK_INFO,
                     ex);
