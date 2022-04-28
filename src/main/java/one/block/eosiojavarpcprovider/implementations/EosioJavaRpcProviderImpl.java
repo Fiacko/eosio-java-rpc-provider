@@ -24,8 +24,10 @@ import one.block.eosiojava.models.rpcProvider.response.GetRequiredKeysResponse;
 import one.block.eosiojava.models.rpcProvider.response.PushTransactionResponse;
 import one.block.eosiojava.models.rpcProvider.response.RPCResponseError;
 import one.block.eosiojava.models.rpcProvider.response.SendTransactionResponse;
+import one.block.eosiojavarpcprovider.error.BlockchainException;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Locale;
 
@@ -110,7 +112,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
      * processing errors or Java IO or network errors from Retrofit.
      */
     @NotNull
-    private <O> O processCall(Call<O> call) throws Exception {
+    private <O> O processCall(Call<O> call) throws EosioJavaRpcProviderCallError, IOException {
         Response<O> response = call.execute();
         if (!response.isSuccessful()) {
             String additionalErrInfo = EosioJavaRpcErrorConstants.RPC_PROVIDER_NO_FURTHER_ERROR_INFO;
@@ -122,7 +124,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
                 if (rpcResponseError == null) {
                     additionalErrInfo = response.errorBody().string();
                 } else {
-                    additionalErrInfo = EosioJavaRpcErrorConstants.RPC_PROVIDER_SEE_FURTHER_ERROR_INFO;
+                    throw new BlockchainException(rpcResponseError);
                 }
             }
 
@@ -146,7 +148,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
         try {
             Call<GetInfoResponse> syncCall = this.rpcProviderApi.getInfo();
             return processCall(syncCall);
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new GetInfoRpcError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GETTING_CHAIN_INFO,
                     ex);
         }
@@ -163,7 +165,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
         try {
             Call<GetBlockResponse> syncCall = this.rpcProviderApi.getBlock(getBlockRequest);
             return processCall(syncCall);
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new GetBlockRpcError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GETTING_BLOCK_INFO,
                     ex);
         }
@@ -220,7 +222,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             refBlockPrefix.set(infoResponse, response.getRefBlockPrefix());
 
             return infoResponse;
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError | NoSuchFieldException | IllegalAccessException ex) {
             throw new GetBlockInfoRpcError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GETTING_BLOCK_INFO,
                     ex);
         }
@@ -238,7 +240,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
         try {
             Call<GetRawAbiResponse> syncCall = this.rpcProviderApi.getRawAbi(getRawAbiRequest);
             return processCall(syncCall);
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new GetRawAbiRpcError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GETTING_RAW_ABI,
                     ex);
         }
@@ -256,7 +258,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
         try {
             Call<GetRequiredKeysResponse> syncCall = this.rpcProviderApi.getRequiredKeys(getRequiredKeysRequest);
             return processCall(syncCall);
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new GetRequiredKeysRpcError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GETTING_REQUIRED_KEYS,
                     ex);
         }
@@ -273,7 +275,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
         try {
             Call<PushTransactionResponse> syncCall = this.rpcProviderApi.pushTransaction(pushTransactionRequest);
             return processCall(syncCall);
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new PushTransactionRpcError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_PUSHING_TRANSACTION,
                     ex);
         }
@@ -290,7 +292,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
         try {
             Call<SendTransactionResponse> syncCall = this.rpcProviderApi.sendTransaction(sendTransactionRequest);
             return processCall(syncCall);
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new SendTransactionRpcError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_SENDING_TRANSACTION,
                     ex);
         }
@@ -308,7 +310,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_ACCOUNT, ex);
         }
     }
@@ -325,7 +327,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_PUSHING_TRANSACTIONS, ex);
         }
     }
@@ -342,7 +344,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_BLOCK_HEADER_STATE, ex);
         }
     }
@@ -359,7 +361,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_ABI, ex);
         }
     }
@@ -376,7 +378,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_CURRENT_BALANCE, ex);
         }
     }
@@ -393,7 +395,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_CURRENT_STATS, ex);
         }
     }
@@ -410,7 +412,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_PRODUCERS, ex);
         }
     }
@@ -427,7 +429,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_RAW_CODE_AND_ABI, ex);
         }
     }
@@ -444,7 +446,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_TABLE_BY_SCOPE, ex);
         }
     }
@@ -461,7 +463,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_TABLE_ROWS, ex);
         }
     }
@@ -478,7 +480,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_KV_TABLE_ROWS, ex);
         }
     }
@@ -495,7 +497,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_CODE, ex);
         }
     }
@@ -512,7 +514,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_ACTION, ex);
         }
     }
@@ -529,7 +531,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_TRANSACTION, ex);
         }
     }
@@ -546,7 +548,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_KEY_ACCOUNTS, ex);
         }
     }
@@ -563,7 +565,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try(ResponseBody responseBody = processCall(syncCall)) {
                 return responseBody.string();
             }
-        } catch (Exception ex) {
+        } catch (IOException | EosioJavaRpcProviderCallError ex) {
             throw new RpcProviderError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_GET_CONTROLLED_ACCOUNTS, ex);
         }
     }
